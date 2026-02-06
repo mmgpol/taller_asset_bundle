@@ -1,31 +1,36 @@
-# The main job for taller_asset_bundle.
 resources:
   jobs:
-    taller_asset_bundle_job:
-      name: taller_asset_bundle_job
-
-      trigger:
-        # Run this job every day, exactly one day from the last run; see https://docs.databricks.com/api/workspace/jobs/create#trigger
-        periodic:
-          interval: 1
-          unit: DAYS
-
-      #email_notifications:
-      #  on_failure:
-      #    - your_email@example.com
-
+    job_asset_bundle:
+      name: job_asset_bundle
       tasks:
-        - task_key: notebook_task
-          job_cluster_key: job_cluster
+        - task_key: ingesta_bronce
           notebook_task:
-            notebook_path: ../src/notebook.ipynb
-
+            notebook_path: ..\etl_taller\01_bronze\ingest_notebook.ipynb
+          job_cluster_key: Job_cluster
+          max_retries: 2
+          min_retry_interval_millis: 900000
+          email_notifications:
+            on_failure:
+              - manuel.manqueo.garcia@polpaicosoluciones.cl
       job_clusters:
-        - job_cluster_key: job_cluster
+        - job_cluster_key: Job_cluster
           new_cluster:
-            spark_version: 15.4.x-scala2.12
-            node_type_id: i3.xlarge
+            spark_version: 16.4.x-scala2.12
+            spark_conf:
+              spark.master: local[*, 4]
+              spark.databricks.cluster.profile: singleNode
+            aws_attributes:
+              first_on_demand: 1
+              availability: SPOT_WITH_FALLBACK
+              zone_id: us-east-1a
+              spot_bid_price_percent: 100
+            node_type_id: m5d.large
+            driver_node_type_id: m5d.large
+            custom_tags:
+              ResourceClass: SingleNode
+            enable_elastic_disk: true
             data_security_mode: SINGLE_USER
-            autoscale:
-                min_workers: 1
-                max_workers: 4
+            runtime_engine: STANDARD
+            num_workers: 0
+      queue:
+        enabled: true
